@@ -254,6 +254,7 @@ const byte nOutputs = sizeof(OutputHW);
   #endif
   const int MaxStates = 256;
   const int SerialBaudRate = 1312500;
+  const int MFCBaudRate = 128000;
   #if MACHINE_BUILD == 0
     #define TEENSY_VERSION 3
     byte hardwareRevisionArray[5] = {25,26,27,28,29};
@@ -429,6 +430,9 @@ byte nModuleEvents[nSerialChannels] = {0}; // Stores number of behavior events a
 uint16_t stateMatrixNBytes = 0; // Number of bytes in the state matrix about to be transmitted
 boolean using255BackSignal = 0; // If enabled, only 254 states can be used and going to "state 255" returns system to the previous state
 
+// RS232 Configuration
+int port_number = 0;
+int port_state = 0;
 
 //////////////////////////////////
 // Initialize general use vars:  /
@@ -1363,6 +1367,48 @@ void handler() { // This is the timer handler function, which is called every (t
         RunningStateMatrix = false;
         resetOutputs(); // Returns all lines to low by forcing final state
         acquiringAnalog = false;
+      break;
+      case 'B': // Switch baud rate of specified module port to be RS232 friendly
+        port_number = PC.readByte(); // Module port 1-5
+        port_state = PC.readByte(); // 0 original baud, 1 reduced baud
+        int baudrate = 0;
+        if (port_state == 1) 
+          baudrate = MFCBaudRate;
+        else if (port_state == 0)
+          baudrate = SerialBaudRate;
+
+        switch (port_number) {
+          case 1:
+            Serial1.end();
+            Serial1.begin(baudrate);
+            Serial1.addMemoryForRead(HWSerialBuf1, 192);  
+          break;
+          case 2:
+            Serial2.end();
+            Serial2.begin(baudrate);
+            Serial2.addMemoryForRead(HWSerialBuf2, 192);  
+          break;
+          
+          case 3:
+            Serial6.end();
+            Serial6.begin(baudrate);
+            Serial6.addMemoryForRead(HWSerialBuf3, 192); 
+          break;
+          
+          case 4:
+            Serial7.end();
+            Serial7.begin(baudrate);
+            Serial7.addMemoryForRead(HWSerialBuf4, 192); 
+          break;
+          
+          case 5:
+            Serial8.end();
+            Serial8.begin(baudrate);
+            Serial8.addMemoryForRead(HWSerialBuf5, 192);  
+            PC.writeByte('5');
+          break;
+        }
+        break;
       break;
     } // End switch commandbyte
   } // End SerialUSB.available
