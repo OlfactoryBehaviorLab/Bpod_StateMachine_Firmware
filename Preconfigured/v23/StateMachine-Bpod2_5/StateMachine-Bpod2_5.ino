@@ -254,7 +254,7 @@ const byte nOutputs = sizeof(OutputHW);
   #endif
   const int MaxStates = 256;
   const int SerialBaudRate = 1312500;
-  const int MFCBaudRate = 128000;
+  const int MFCBaudRate = 57600;
   #if MACHINE_BUILD == 0
     #define TEENSY_VERSION 3
     byte hardwareRevisionArray[5] = {25,26,27,28,29};
@@ -1405,9 +1405,9 @@ void handler() { // This is the timer handler function, which is called every (t
             Serial8.end();
             Serial8.begin(baudrate);
             Serial8.addMemoryForRead(HWSerialBuf5, 192);  
-            PC.writeByte('5');
           break;
         }
+        PC.writeChar(1);
         break;
       break;
     } // End switch commandbyte
