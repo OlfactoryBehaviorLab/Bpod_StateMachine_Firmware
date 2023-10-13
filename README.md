@@ -1,3 +1,6 @@
+# Dewan Lab Fork of BPOD Statemachine Firmware
+## Some of the default firmwares have been modified for specialization needed in the lab
+
 # Bpod_StateMachine_Firmware
 
 Arduino firmware for Bpod State Machine (all hardware versions)
