@@ -253,8 +253,9 @@ const byte nOutputs = sizeof(OutputHW);
     const byte maxSerialEvents = 90;
   #endif
   const int MaxStates = 256;
-  const int SerialBaudRate = 1312500;
-  const int MFCBaudRate = 57600;
+  const int SerialBaudRate = 1312500; // Default Bpod Baudrate
+  const int MFCBaudRate = 57600; // RS232 Baudrate
+  int current_baudrates[5] = {1312500, 1312500, 1312500, 1312500, 1312500}; // List of Baudrates
   #if MACHINE_BUILD == 0
     #define TEENSY_VERSION 3
     byte hardwareRevisionArray[5] = {25,26,27,28,29};
@@ -431,8 +432,8 @@ uint16_t stateMatrixNBytes = 0; // Number of bytes in the state matrix about to 
 boolean using255BackSignal = 0; // If enabled, only 254 states can be used and going to "state 255" returns system to the previous state
 
 // RS232 Configuration
-int port_number = 0;
-int port_state = 0;
+int arg1 = 0;
+int arg2 = 0;
 
 //////////////////////////////////
 // Initialize general use vars:  /
@@ -1369,45 +1370,79 @@ void handler() { // This is the timer handler function, which is called every (t
         acquiringAnalog = false;
       break;
       case 'B': // Switch baud rate of specified module port to be RS232 friendly
-        port_number = PC.readByte(); // Module port 1-5
-        port_state = PC.readByte(); // 0 original baud, 1 reduced baud
+        arg1 = PC.readByte(); // Module port 1-5 or ? for baud probing
+        arg2 = PC.readByte(); // 0 original baud, 1 reduced baud; or port no. for baud probing
         int baudrate = 0;
-        if (port_state == 1) 
-          baudrate = MFCBaudRate;
-        else if (port_state == 0)
-          baudrate = SerialBaudRate;
+        int port = 0;
 
-        switch (port_number) {
+        if (arg1 == '?')
+          if(1 =< arg2 <= 5)
+            port = arg2;
+          else
+            PC.writeInt8(2); // Invalid port number
+            break;
+        else
+          {
+            if (arg2 == 1) 
+              baudrate = MFCBaudRate;
+            else if (arg2 == 0)
+              baudrate = SerialBaudRate;
+            else
+              PC.writeInt8(3); // Invalid state
+              break;
+          }
+
+        switch (arg1) {
           case 1:
             Serial1.end();
             Serial1.begin(baudrate);
-            Serial1.addMemoryForRead(HWSerialBuf1, 192);  
+            Serial1.addMemoryForRead(HWSerialBuf1, 192);
+            current_baudrates[0] = baudrate;
+            PC.writeUint8(1); // Success! 
           break;
+          
           case 2:
             Serial2.end();
             Serial2.begin(baudrate);
-            Serial2.addMemoryForRead(HWSerialBuf2, 192);  
+            Serial2.addMemoryForRead(HWSerialBuf2, 192); 
+            current_baudrates[1] = baudrate;
+            PC.writeUint8(1); // Success!
           break;
           
           case 3:
             Serial6.end();
             Serial6.begin(baudrate);
-            Serial6.addMemoryForRead(HWSerialBuf3, 192); 
+            Serial6.addMemoryForRead(HWSerialBuf3, 192);
+            current_baudrates[2] = baudrate;
+            PC.writeUint8(1); // Success!
           break;
           
           case 4:
             Serial7.end();
             Serial7.begin(baudrate);
-            Serial7.addMemoryForRead(HWSerialBuf4, 192); 
+            Serial7.addMemoryForRead(HWSerialBuf4, 192);
+            current_baudrates[3] = baudrate;  
+            PC.writeUint8(1); // Success!          
           break;
           
           case 5:
             Serial8.end();
             Serial8.begin(baudrate);
             Serial8.addMemoryForRead(HWSerialBuf5, 192);  
+            current_baudrates[4] = baudrate;
+            PC.writeUint8(1); // Success!
+          break;
+
+          case '?':
+            baudrate = current_baudrates[port-1];
+            PC.writeUint8(baudrate);
+          break;
+
+          else:
+            PC.writeUint8(4); // Invalid command
           break;
         }
-        PC.writeChar(1);
+
         break;
       break;
     } // End switch commandbyte
